@@ -111,6 +111,7 @@ zephyr_library_named(zephyr)
 
 zephyr_include_directories(
   include
+  subsys/bluetooth/controller/ll_sw
   ${PROJECT_BINARY_DIR}/include/generated
   ${USERINCLUDE}
   ${STDINCLUDE}

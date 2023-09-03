@@ -43,6 +43,8 @@
 
 #define TEST_WITH_DUMMY_PDU 0
 
+ll_adv_iso_radio_isr_cb_t radio_user_cb;
+
 static int init_reset(void);
 static void prepare(void *param);
 static void create_prepare_bh(void *param);
@@ -451,6 +453,11 @@ static void isr_tx_normal(void *param)
 	isr_tx_common(param, isr_tx_normal, lll_isr_done);
 }
 
+void lll_adv_iso_radio_isr_cb_set(ll_adv_iso_radio_isr_cb_t cb)
+{
+	radio_user_cb = cb;
+}
+
 static void isr_tx_common(void *param,
 			  radio_isr_cb_t isr_tx,
 			  radio_isr_cb_t isr_done)
@@ -469,6 +476,10 @@ static void isr_tx_common(void *param,
 	}
 
 	lll = param;
+
+	if (lll->irc_curr == 1) {
+		radio_user_cb();
+	}
 	/* FIXME: Sequential or Interleaved BIS subevents decision */
 	/* Sequential Tx complete flow pseudo code */
 	if (lll->bn_curr < lll->bn) {
