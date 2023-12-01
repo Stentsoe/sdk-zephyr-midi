@@ -1600,7 +1600,7 @@ static isoal_status_t isoal_tx_pdu_emit(const struct isoal_source *source_ctx,
 	}
 
 	/* Set payload number */
-	node_tx->payload_count = payload_number & 0x7fffffffff;
+	node_tx->payload_count = (payload_number - 1) & 0x7fffffffff ;
 	node_tx->sdu_fragments = sdu_fragments;
 	/* Set PDU LLID */
 	produced_pdu->contents.pdu->ll_id = pdu_ll_id;

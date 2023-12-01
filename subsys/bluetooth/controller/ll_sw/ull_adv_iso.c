@@ -77,6 +77,8 @@ static void adv_iso_disable(void *param);
 static void disabled_cb(void *param);
 static void tx_lll_flush(void *param);
 
+ll_adv_iso_radio_pdu_cb_t pdu_user_cb;
+
 static memq_link_t link_lll_prepare;
 static struct mayfly mfy_lll_prepare = {0U, 0U, &link_lll_prepare, NULL, NULL};
 
@@ -1272,7 +1274,32 @@ static void ticker_cb(uint32_t ticks_at_expire, uint32_t ticks_drift,
 	uint32_t ret;
 	uint8_t ref;
 
+	struct lll_adv_iso *lll;
+	struct lll_adv_iso_stream *stream;
+	uint16_t stream_handle;
+	memq_link_t *link = NULL;
+	struct node_tx_iso *tx;
+	struct pdu_bis *pdu;
+
 	DEBUG_RADIO_PREPARE_A(1);
+
+	lll = &adv_iso->lll;
+	stream_handle = lll->stream_handle[lll->num_bis-1];
+	stream = ull_adv_iso_lll_stream_get(stream_handle);
+	link = memq_peek(stream->memq_tx.head,
+					 stream->memq_tx.tail, (void **)&tx);
+
+	if (link)
+	{
+		pdu = (void *)tx->pdu;
+		int user_data_len = pdu_user_cb(pdu->payload);
+		if(user_data_len > 0)
+		{
+			pdu->len = user_data_len + 1;
+		}
+	} else {
+		pdu_user_cb(NULL);
+	}
 
 	/* Increment prepare reference count */
 	ref = ull_ref_inc(&adv_iso->ull);
@@ -1414,4 +1441,9 @@ static void tx_lll_flush(void *param)
 
 	/* Enqueue the terminate towards ULL context */
 	ull_rx_put_sched(link, rx);
+}
+
+void lll_adv_iso_radio_pdu_cb_set(ll_adv_iso_radio_pdu_cb_t cb)
+{
+	pdu_user_cb = cb;
 }

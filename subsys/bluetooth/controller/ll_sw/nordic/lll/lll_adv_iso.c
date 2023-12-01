@@ -477,9 +477,6 @@ static void isr_tx_common(void *param,
 
 	lll = param;
 
-	if (lll->irc_curr == 1) {
-		radio_user_cb();
-	}
 	/* FIXME: Sequential or Interleaved BIS subevents decision */
 	/* Sequential Tx complete flow pseudo code */
 	if (lll->bn_curr < lll->bn) {
