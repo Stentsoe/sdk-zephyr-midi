@@ -37,6 +37,11 @@
 
 #include "hal/debug.h"
 
+#include <zephyr/logging/log.h>
+
+#define LOG_MODULE_NAME lll_sync_iso
+LOG_MODULE_REGISTER(LOG_MODULE_NAME);
+
 static int init_reset(void);
 static void prepare(void *param);
 static void create_prepare_bh(void *param);
@@ -478,6 +483,8 @@ static void isr_rx_estab(void *param)
 	}
 }
 
+uint8_t drop_counter = 0;
+
 static void isr_rx(void *param)
 {
 	struct lll_sync_iso_stream *stream;
@@ -548,6 +555,48 @@ static void isr_rx(void *param)
 
 	/* BIS index */
 	bis_idx = lll->bis_curr - 1U;
+
+#if CONFIG_MIDI_TEST_MODE
+#if CONFIG_MIDI_TEST_DROP_FIRST_IRC
+	
+
+	if (trx_cnt == 1U)
+	{
+		if((++drop_counter) % CONFIG_MIDI_TEST_DROP_FIRST_IRC_RATE == 0)
+		{
+			LOG_INF("Dropping packet");
+			crc_ok = 0U;
+		}
+		
+	}
+#endif /*CONFIG_MIDI_TEST_DROP_FIRST_IRC*/
+
+#if CONFIG_MIDI_TEST_DROP_SECOND_IRC
+	if (trx_cnt == 1U)
+	{
+		if((++drop_counter) % CONFIG_MIDI_TEST_DROP_SECOND_IRC_RATE == 0)
+		{
+			// LOG_INF("Dropping packet");
+			crc_ok = 0U;
+		}
+		
+	}
+
+	if (trx_cnt == 2U)
+	{
+		if((drop_counter) % CONFIG_MIDI_TEST_DROP_SECOND_IRC_RATE == 0)
+		{
+			// LOG_INF("Dropping packet");
+			crc_ok = 0U;
+		}
+		
+	}
+#endif /*CONFIG_MIDI_TEST_DROP_SECOND_IRC*/
+	// if((drop_counter) % CONFIG_MIDI_TEST_DROP_SECOND_IRC_RATE/2 == 0)
+	// {
+	// 	LOG_INF("Droptrx_cnt: %d, crc_ok: %d", trx_cnt, crc_ok);
+	// }
+#endif /*CONFIG_MIDI_TEST_MODE*/
 
 	/* Check CRC and generate ISO Data PDU */
 	if (crc_ok) {
@@ -977,6 +1026,7 @@ isr_rx_next_subevent:
 
 		start_us = hcto;
 		hcto = radio_tmr_start_us(0U, start_us);
+		LOG_WRN("First subevent PDU was not received");
 		LL_ASSERT(hcto == (start_us + 1U));
 
 		hcto += ((EVENT_JITTER_US + EVENT_TICKER_RES_MARGIN_US +
@@ -1051,6 +1101,7 @@ static void isr_rx_done(void *param)
 
 		payload_tail = lll->payload_tail;
 		bn = lll->bn;
+
 		while (bn--) {
 			if (lll->payload[bis_idx][payload_tail]) {
 				node_rx =

@@ -46,6 +46,8 @@
 
 #include "ll.h"
 
+#include "test_gpio.h"
+
 #include "bt_crypto.h"
 
 #include "hal/debug.h"
@@ -801,6 +803,8 @@ static void ticker_cb(uint32_t ticks_at_expire, uint32_t ticks_drift,
 	/* Increment prepare reference count */
 	ref = ull_ref_inc(&sync_iso->ull);
 	LL_ASSERT(ref);
+
+	test_gpio_toggle(6);
 
 	/* Append timing parameters */
 	p.ticks_at_expire = ticks_at_expire;

@@ -32,6 +32,8 @@
 #include "isoal.h"
 #include "ull_iso_types.h"
 
+#include "lll_adv_iso.h"
+
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(bt_ctlr_isoal, LOG_LEVEL_INF);
@@ -86,6 +88,12 @@ struct
 	struct isoal_source source_state[CONFIG_BT_CTLR_ISOAL_SOURCES];
 #endif /* CONFIG_BT_CTLR_ADV_ISO || CONFIG_BT_CTLR_CONN_ISO */
 } isoal_global;
+
+ll_adv_iso_radio_pdu_cb_t next_pdu_cb;
+void lll_adv_iso_radio_next_pdu_cb_set(ll_adv_iso_radio_pdu_cb_t cb)
+{
+	next_pdu_cb = cb;	
+}
 
 /**
  * @brief Internal reset
@@ -1600,7 +1608,8 @@ static isoal_status_t isoal_tx_pdu_emit(const struct isoal_source *source_ctx,
 	}
 
 	/* Set payload number */
-	node_tx->payload_count = (payload_number - 1) & 0x7fffffffff ;
+	node_tx->payload_count = (payload_number) & 0x7fffffffff ;
+	// node_tx->payload_count = (payload_number - 1) & 0x7fffffffff ;
 	node_tx->sdu_fragments = sdu_fragments;
 	/* Set PDU LLID */
 	produced_pdu->contents.pdu->ll_id = pdu_ll_id;
@@ -1980,6 +1989,10 @@ static isoal_status_t isoal_tx_unframed_produce(isoal_source_handle_t source_hdl
 		struct isoal_pdu_produced  *pdu = &pp->pdu;
 		err |= err_alloc;
 
+		if(next_pdu_cb != NULL) 
+		{
+			next_pdu_cb(pdu->contents.pdu);
+		}
 		/*
 		 * For this PDU we can only consume of packet, bounded by:
 		 *   - What can fit in the destination PDU.
